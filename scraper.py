@@ -1,16 +1,11 @@
 import sys
 import csv
 import requests
+import datetime
 from bs4 import BeautifulSoup
-
-save_to_file = False
-get_data = False
 
 
 class Scraper:
-    # TODO comments
-    # TODO Check if data is any unusale (twice the same fuel_type)
-
     def __init__(
         self,
         url = 'https://www.unitedconsumers.com/brandstofprijzen',
@@ -19,7 +14,7 @@ class Scraper:
         self.url = url
         self.filename = filename
         self.fuel_data = []
-        self.field_names = ['name', 'price', 'difference']
+        self.field_names = ['name', 'price', 'difference', 'date']
 
     def run(self) -> None:
         with open(f'{self.filename}.html', 'r', newline='') as f:
@@ -36,7 +31,12 @@ class Scraper:
             price = self.__clean_text(fuel_info[0].text)
             difference = self.__clean_text(fuel_info[1].text)
 
-            self.fuel_data.append({'name': fuel_type, 'price': price, 'difference': difference})
+            self.fuel_data.append({
+                'name': fuel_type, 
+                'price': price, 
+                'difference': difference, 
+                'date': datetime.datetime.now()
+            })
 
     def get_html(self) -> bytes:
         try:
@@ -54,9 +54,7 @@ class Scraper:
             raise SystemExit(e) # Example no internet
 
     def save_to_csv(self) -> None:
-        # TODO check if file is valid
-        # TODO Add date to file name or row
-        with open(f'P{self.filename}.csv', 'w', newline='') as f: 
+        with open(f'{self.filename}.csv', 'w', newline='') as f: 
             writer = csv.DictWriter(f, fieldnames = self.field_names) 
             writer.writeheader() 
             writer.writerows(self.fuel_data) 
@@ -74,8 +72,11 @@ class Scraper:
 
         return cleaned_text
 
-def get_params() -> None:
+def get_params() -> tuple:
     # TODO add arg for file path
+    save_to_file = False
+    get_data = False
+
     if len(sys.argv) > 1:
         symbol = sys.argv[1]
         if symbol == '-s':
@@ -83,15 +84,18 @@ def get_params() -> None:
         if symbol == '-g':
             get_data = True
 
-    elif len(sys.argv) > 2:
+    if len(sys.argv) > 2:
         symbol = sys.argv[2]
         if symbol == '-s':
             save_to_file = True
         if symbol == '-g':
             get_data = True
 
+    return save_to_file, get_data
+
 
 def scrape() -> dict:
+    save_to_file, get_data = get_params()
     scraper = Scraper()
 
     if get_data:
@@ -106,7 +110,5 @@ def scrape() -> dict:
 
 
 if __name__ == '__main__':
-    get_params()
-
     data = scrape()
     print(data)
